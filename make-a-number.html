@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag and Drop Number Challenges</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+            background: linear-gradient(160deg, #f8f9fa 0%, #eef1f6 100%);
+            text-align: center;
+            color: #4a4a4a;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin: 0 0 20px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        /* Two-column app layout, built as stacked rows so the left/right
+           box in each row shares the same height and their edges line up */
+        .app {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .app-row {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        /* Challenge Dashboard */
+        .dashboard {
+            background-color: #fff3cd;
+            border: 4px solid #ffc107;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .dashboard .label-small { font-size: 1em; color: #d39e00; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+        .dashboard h2 { margin: 4px 0 10px 0; color: #333; font-size: 2.6em; word-break: break-word; }
+        #feedback { font-size: 1.15em; font-weight: bold; min-height: 30px; color: #28a745; margin: 10px 0;}
+        #words-output { margin: 10px 0; }
+        .words-card {
+            background: white;
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin: 8px 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            text-align: left;
+        }
+        .words-card .label { display: block; font-weight: bold; color: #d39e00; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.5px; }
+        .words-card .value { color: #333; font-size: 1.05em; text-transform: capitalize; }
+
+        .btn-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+
+        /* Current total card */
+        .total-card {
+            background: white;
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .total-card .label-small { font-size: 0.95em; color: #888; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        #total-display {
+            display: block;
+            font-size: 2.6em;
+            color: #333;
+            font-weight: bold;
+            margin-top: 4px;
+            word-break: break-word;
+        }
+
+        /* Panels in main area */
+        .panel {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .panel-title {
+            margin: 0 0 16px 0;
+            font-size: 1.3em;
+            color: #555;
+            text-align: left;
+        }
+
+        /* Supply Area */
+        .supply-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 16px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 15px;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .supply-item {
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+            cursor: grab;
+            padding: 10px 6px 6px 6px;
+            border-radius: 12px;
+            min-height: 110px;
+            transition: transform 0.15s, background-color 0.15s;
+        }
+        .supply-item:hover { transform: translateY(-3px); background-color: rgba(255,255,255,0.6); }
+        .supply-item:active { cursor: grabbing; }
+        .supply-item p { margin: 10px 0 0 0; font-weight: bold; color: #555; font-size: 0.9em; }
+
+        /* Drop Zone */
+        .board { display: flex; justify-content: center; width: 100%; }
+
+        .column {
+            background: white;
+            padding: 20px;
+            border: 4px dashed #ced4da;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .column.drag-over { background-color: #f1f8ff; border-color: #70a1ff; }
+
+        /* One big box that collects ALL cubes together */
+        .big-box {
+            width: 100%;
+            min-height: 180px;
+            border-color: #a55eea;
+            background: #faf5ff;
+            box-sizing: border-box;
+        }
+        .big-box .drop-container {
+            align-items: flex-end;
+        }
+        .column h3 { margin: 5px 0 15px 0; font-size: 1.4em; color: #555; }
+
+        /* Responsive: stack on narrow screens */
+        @media (max-width: 820px) {
+            .app-row { grid-template-columns: 1fr; }
+        }
+        
+        /* Block Visuals */
+        .block { margin: 5px; display: inline-block; }
+        
+        /* Shared 3D Cube styling for 1000 / 10000 / 1 lakh / 10 lakh / 1 crore */
+        .block-1000, .block-10000, .block-100000, .block-1000000, .block-10000000 {
+            position: relative;
+            width: 50px; 
+            height: 50px; 
+            margin: 15px 15px 5px 5px;
+        }
+        .block-1000::before, .block-10000::before, .block-100000::before, .block-1000000::before, .block-10000000::before {
+            content: "";
+            position: absolute;
+            top: -15px; 
+            left: 7px;
+            width: 50px; 
+            height: 15px;
+            transform: skewX(-45deg);
+            background-size: 5px 5px;
+        }
+        .block-1000::after, .block-10000::after, .block-100000::after, .block-1000000::after, .block-10000000::after {
+            content: "";
+            position: absolute;
+            top: -8px; 
+            right: -15px;
+            width: 15px; 
+            height: 50px;
+            transform: skewY(-45deg);
+            background-size: 5px 5px;
+        }
+
+        /* 1000 Block: 3D Cube (orange) */
+        .block-1000 { 
+            background-color: #ff9f43; 
+            border: 1px solid #e17055; 
+            background-image: linear-gradient(to right, #e17055 1px, transparent 1px), 
+                              linear-gradient(to bottom, #e17055 1px, transparent 1px);
+            background-size: 5px 5px;
+        }
+        .block-1000::before {
+            background-color: #ffb169;
+            border: 1px solid #e17055;
+            background-image: linear-gradient(to right, #e17055 1px, transparent 1px), 
+                              linear-gradient(to bottom, #e17055 1px, transparent 1px);
+        }
+        .block-1000::after {
+            background-color: #e8862e;
+            border: 1px solid #e17055;
+            background-image: linear-gradient(to right, #e17055 1px, transparent 1px), 
+                              linear-gradient(to bottom, #e17055 1px, transparent 1px);
+        }
+
+        /* 10 Thousand Block: 3D Cube (teal) */
+        .block-10000 { 
+            background-color: #1dd1a1; 
+            border: 1px solid #10ac84; 
+            background-image: linear-gradient(to right, #10ac84 1px, transparent 1px), 
+                              linear-gradient(to bottom, #10ac84 1px, transparent 1px);
+            background-size: 5px 5px;
+        }
+        .block-10000::before {
+            background-color: #4de0bb;
+            border: 1px solid #10ac84;
+            background-image: linear-gradient(to right, #10ac84 1px, transparent 1px), 
+                              linear-gradient(to bottom, #10ac84 1px, transparent 1px);
+        }
+        .block-10000::after {
+            background-color: #10ac84;
+            border: 1px solid #10ac84;
+            background-image: linear-gradient(to right, #0c8a6a 1px, transparent 1px), 
+                              linear-gradient(to bottom, #0c8a6a 1px, transparent 1px);
+        }
+
+        /* 1 Lakh Block: 3D Cube (purple) */
+        .block-100000 { 
+            background-color: #a55eea; 
+            border: 1px solid #8854d0; 
+            background-image: linear-gradient(to right, #8854d0 1px, transparent 1px), 
+                              linear-gradient(to bottom, #8854d0 1px, transparent 1px);
+            background-size: 5px 5px;
+        }
+        .block-100000::before {
+            background-color: #b978f0;
+            border: 1px solid #8854d0;
+            background-image: linear-gradient(to right, #8854d0 1px, transparent 1px), 
+                              linear-gradient(to bottom, #8854d0 1px, transparent 1px);
+        }
+        .block-100000::after {
+            background-color: #8854d0;
+            border: 1px solid #8854d0;
+            background-image: linear-gradient(to right, #6c3fb0 1px, transparent 1px), 
+                              linear-gradient(to bottom, #6c3fb0 1px, transparent 1px);
+        }
+
+        /* 10 Lakh Block: 3D Cube (indigo/blue) */
+        .block-1000000 { 
+            background-color: #4b7bec; 
+            border: 1px solid #3867d6; 
+            background-image: linear-gradient(to right, #3867d6 1px, transparent 1px), 
+                              linear-gradient(to bottom, #3867d6 1px, transparent 1px);
+            background-size: 5px 5px;
+        }
+        .block-1000000::before {
+            background-color: #6b93f0;
+            border: 1px solid #3867d6;
+            background-image: linear-gradient(to right, #3867d6 1px, transparent 1px), 
+                              linear-gradient(to bottom, #3867d6 1px, transparent 1px);
+        }
+        .block-1000000::after {
+            background-color: #3867d6;
+            border: 1px solid #3867d6;
+            background-image: linear-gradient(to right, #2d52ab 1px, transparent 1px), 
+                              linear-gradient(to bottom, #2d52ab 1px, transparent 1px);
+        }
+
+        /* 1 Crore Block: 3D Cube (red) */
+        .block-10000000 { 
+            background-color: #ff6b6b; 
+            border: 1px solid #ee5253; 
+            background-image: linear-gradient(to right, #ee5253 1px, transparent 1px), 
+                              linear-gradient(to bottom, #ee5253 1px, transparent 1px);
+            background-size: 5px 5px;
+        }
+        .block-10000000::before {
+            background-color: #ff8787;
+            border: 1px solid #ee5253;
+            background-image: linear-gradient(to right, #ee5253 1px, transparent 1px), 
+                              linear-gradient(to bottom, #ee5253 1px, transparent 1px);
+        }
+        .block-10000000::after {
+            background-color: #ee5253;
+            border: 1px solid #ee5253;
+            background-image: linear-gradient(to right, #c93a3a 1px, transparent 1px), 
+                              linear-gradient(to bottom, #c93a3a 1px, transparent 1px);
+        }
+
+        /* 100 Block: Flat Square (10x10) */
+        .block-100 { 
+            width: 50px; 
+            height: 50px; 
+            background-color: #2ed573; 
+            border: 1px solid #27ae60; 
+            box-shadow: 2px 2px 0 #27ae60;
+            background-image: linear-gradient(to right, #27ae60 1px, transparent 1px), 
+                              linear-gradient(to bottom, #27ae60 1px, transparent 1px);
+            background-size: 5px 5px;
+            margin: 5px;
+        }
+
+        .block-10 { 
+            width: 15px; height: 80px; 
+            background-color: #ff7eb3; 
+            border: 2px solid #fd4b93; box-shadow: 2px 2px 0 #fd4b93;
+            background-image: linear-gradient(to bottom, transparent 90%, #fd4b93 90%); 
+            background-size: 100% 8px;
+        }
+
+        .block-1 { 
+            width: 15px; height: 15px; 
+            background-color: #70a1ff; 
+            border: 2px solid #1e90ff; box-shadow: 2px 2px 0 #1e90ff;
+        }
+        
+        .drop-container { 
+            display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start;
+            width: 100%; flex-grow: 1; pointer-events: none;
+        }
+
+        .btn {
+            font-size: 1.05em; padding: 10px 18px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: white;
+            transition: transform 0.1s, filter 0.15s;
+        }
+        .btn:hover { filter: brightness(1.05); }
+        .btn-check { background-color: #28a745; border-bottom: 4px solid #1e7e34; }
+        .btn-new { background-color: #17a2b8; border-bottom: 4px solid #117a8b; }
+        .btn-clear { background-color: #a4b0be; border-bottom: 4px solid #747d8c; }
+        .btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+    <h1>Place Value Challenge!</h1>
+
+    <div class="app">
+        <!-- Row 1: Target dashboard (left) + Number Blocks tray (right) -->
+        <div class="app-row">
+            <div class="dashboard">
+                <span class="label-small">Target</span>
+                <h2><span id="target-number">0</span></h2>
+                <p id="feedback">Drag the blocks to match the target number!</p>
+                <div id="words-output"></div>
+                <div class="btn-row">
+                    <button class="btn btn-check" onclick="checkAnswer()">Check Answer</button>
+                    <button class="btn btn-new" onclick="newChallenge()">New Challenge</button>
+                </div>
+            </div>
+
+            <section class="panel">
+                <h3 class="panel-title">Number Blocks</h3>
+                <div class="supply-area">
+                    <div class="supply-item" draggable="true" ondragstart="drag(event, 10000000)">
+                        <div class="block block-10000000"></div>
+                        <p>1 Crore</p>
+                    </div>
+                    <div class="supply-item" draggable="true" ondragstart="drag(event, 1000000)">
+                        <div class="block block-1000000"></div>
+                        <p>10 Lakh</p>
+                    </div>
+                    <div class="supply-item" draggable="true" ondragstart="drag(event, 100000)">
+                        <div class="block block-100000"></div>
+                        <p>1 Lakh</p>
+                    </div>
+                    <div class="supply-item" draggable="true" ondragstart="drag(event, 10000)">
+                        <div class="block block-10000"></div>
+                        <p>10,000</p>
+                    </div>
+                    <div class="supply-item" draggable="true" ondragstart="drag(event, 1000)">
+                        <div class="block block-1000"></div>
+                        <p>1,000</p>
+                    </div>
+                    <div class="supply-item" draggable="true" ondragstart="drag(event, 100)">
+                        <div class="block block-100"></div>
+                        <p>100</p>
+                    </div>
+                    <div class="supply-item" draggable="true" ondragstart="drag(event, 10)">
+                        <div class="block block-10"></div>
+                        <p>10</p>
+                    </div>
+                    <div class="supply-item" draggable="true" ondragstart="drag(event, 1)">
+                        <div class="block block-1"></div>
+                        <p>1</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Row 2: Current total (left) + Big drop box (right) -->
+        <div class="app-row">
+            <div class="total-card">
+                <span class="label-small">Current Total</span>
+                <span id="total-display">0</span>
+                <div class="btn-row">
+                    <button class="btn btn-clear" onclick="clearBoard()">Clear Board</button>
+                </div>
+            </div>
+
+            <!-- One big box that collects ALL cubes together as a running sum/total -->
+            <section class="board">
+                <div class="column big-box" id="zone-big" ondrop="drop(event, 'big')" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)">
+                    <h3>Drop All Blocks Here</h3>
+                    <div class="drop-container" id="container-big"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        let total = 0;
+        let target = 0;
+
+        // The place values available as cubes/blocks in the game
+        const placeValues = [10000000, 1000000, 100000, 10000, 1000, 100, 10, 1];
+
+        // Format numbers using the Indian numbering system (lakh / crore grouping)
+        function formatIndian(num) {
+            return num.toLocaleString('en-IN');
+        }
+
+        // Build a random target: 20% of the time a "small" number (below 1,000),
+        // 80% of the time a "big" number (1,000 and above).
+        // Step 1: pick the highest place value this number reaches (chosen only from
+        // the small or big range). Step 2: fill each place from that top place down.
+        function generateTarget() {
+            // placeValues is ordered largest -> smallest:
+            // index 0..4 = 1cr,10L,1L,10k,1k (big), index 5..7 = 100,10,1 (small)
+            const bigTopIndices = [0, 1, 2, 3, 4];   // top place is 1k or higher
+            const smallTopIndices = [5, 6, 7];       // top place is 100, 10, or 1
+
+            let pool = (Math.random() < 0.20) ? smallTopIndices : bigTopIndices;
+            let topIndex = pool[Math.floor(Math.random() * pool.length)];
+
+            let value = 0;
+            // The top place gets 1..9 (so the number actually reaches that size),
+            // every lower place gets 0..9.
+            for (let i = topIndex; i < placeValues.length; i++) {
+                let min = (i === topIndex) ? 1 : 0;
+                let count = min + Math.floor(Math.random() * (9 - min + 1));
+                value += count * placeValues[i];
+            }
+            return value;
+        }
+
+        function newChallenge() {
+            target = generateTarget();
+
+            document.getElementById('target-number').innerText = formatIndian(target);
+            document.getElementById('feedback').innerText = "Drag the blocks to match the target number!";
+            document.getElementById('feedback').style.color = "#333";
+            document.getElementById('words-output').innerHTML = "";
+            clearBoard();
+        }
+
+        function checkAnswer() {
+            let feedbackEl = document.getElementById('feedback');
+            if (total === target) {
+                feedbackEl.innerText = "🎉 Amazing! You built " + formatIndian(target) + " perfectly! 🎉";
+                feedbackEl.style.color = "#28a745";
+            } else if (total > target) {
+                feedbackEl.innerText = "Oops, " + formatIndian(total) + " is too high! Try taking some away.";
+                feedbackEl.style.color = "#dc3545";
+            } else {
+                feedbackEl.innerText = "Not quite! You have " + formatIndian(total) + ", but you need " + formatIndian(target) + ". Add more!";
+                feedbackEl.style.color = "#dc3545";
+            }
+
+            // Show the target number in words, in both numbering systems
+            document.getElementById('words-output').innerHTML =
+                '<div class="words-card"><span class="label">Indian system:</span> ' +
+                    '<span class="value">' + numberToWordsIndian(target) + '</span></div>' +
+                '<div class="words-card"><span class="label">International system:</span> ' +
+                    '<span class="value">' + numberToWordsInternational(target) + '</span></div>';
+        }
+
+        // --- Number to words helpers ---
+        const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+            'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
+            'eighteen', 'nineteen'];
+        const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+        // Converts a number below 1000 into words (e.g. 305 -> "three hundred five")
+        function twoOrThreeDigitToWords(n) {
+            let words = '';
+            if (n >= 100) {
+                words += ONES[Math.floor(n / 100)] + ' hundred';
+                n %= 100;
+                if (n > 0) words += ' ';
+            }
+            if (n >= 20) {
+                words += TENS[Math.floor(n / 10)];
+                if (n % 10 > 0) words += ' ' + ONES[n % 10];
+            } else if (n > 0) {
+                words += ONES[n];
+            }
+            return words;
+        }
+
+        // Indian system: crore, lakh, thousand, hundred
+        function numberToWordsIndian(num) {
+            if (num === 0) return 'zero';
+            let parts = [];
+            let crore = Math.floor(num / 10000000); num %= 10000000;
+            let lakh = Math.floor(num / 100000);   num %= 100000;
+            let thousand = Math.floor(num / 1000);  num %= 1000;
+            let rest = num;
+
+            if (crore > 0) parts.push(numberToWordsIndian(crore) + ' crore');
+            if (lakh > 0) parts.push(twoOrThreeDigitToWords(lakh) + ' lakh');
+            if (thousand > 0) parts.push(twoOrThreeDigitToWords(thousand) + ' thousand');
+            if (rest > 0) parts.push(twoOrThreeDigitToWords(rest));
+            return parts.join(' ').trim();
+        }
+
+        // International system: billion, million, thousand
+        function numberToWordsInternational(num) {
+            if (num === 0) return 'zero';
+            let parts = [];
+            let billion = Math.floor(num / 1000000000); num %= 1000000000;
+            let million = Math.floor(num / 1000000);    num %= 1000000;
+            let thousand = Math.floor(num / 1000);       num %= 1000;
+            let rest = num;
+
+            if (billion > 0) parts.push(twoOrThreeDigitToWords(billion) + ' billion');
+            if (million > 0) parts.push(twoOrThreeDigitToWords(million) + ' million');
+            if (thousand > 0) parts.push(twoOrThreeDigitToWords(thousand) + ' thousand');
+            if (rest > 0) parts.push(twoOrThreeDigitToWords(rest));
+            return parts.join(' ').trim();
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.add('drag-over');
+        }
+
+        function leaveDrop(ev) {
+            ev.currentTarget.classList.remove('drag-over');
+        }
+
+        function drag(ev, value) {
+            ev.dataTransfer.setData("value", value);
+        }
+
+        function drop(ev, expectedValue) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-over');
+            
+            let draggedValue = parseInt(ev.dataTransfer.getData("value"));
+
+            // The big box accepts every block; each one adds to the running total
+            total += draggedValue;
+            document.getElementById('total-display').innerText = formatIndian(total);
+
+            let block = document.createElement('div');
+            block.className = 'block block-' + draggedValue;
+
+            document.getElementById('container-big').appendChild(block);
+        }
+
+        function clearBoard() {
+            total = 0;
+            document.getElementById('total-display').innerText = formatIndian(total);
+            document.getElementById('container-big').innerHTML = '';
+        }
+
+        // Initialize the first challenge on load
+        window.onload = newChallenge;
+    </script>
+</body>
+</html>
